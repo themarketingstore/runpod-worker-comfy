@@ -1,1 +1,13 @@
 runpod==1.3.6
+rembg
+deepdiff
+kornia
+spandrel
+imageio_ffmpeg
+supervision
+pynvml
+inference
+opencv-python
+matplotlib
+clip
+pillow

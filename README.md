@@ -16,32 +16,36 @@ Read our article here: https://blib.la/blog/comfyui-on-runpod
 
 <!-- toc -->
 
-- [Quickstart](#quickstart)
-- [Features](#features)
-- [Config](#config)
-  * [Upload image to AWS S3](#upload-image-to-aws-s3)
-- [Use the Docker image on RunPod](#use-the-docker-image-on-runpod)
-- [API specification](#api-specification)
-  * [JSON Request Body](#json-request-body)
-  * [Fields](#fields)
-    + ["input.images"](#inputimages)
-- [Interact with your RunPod API](#interact-with-your-runpod-api)
-  * [Health status](#health-status)
-  * [Generate an image](#generate-an-image)
-    + [Example request with cURL](#example-request-with-curl)
-- [How to get the workflow from ComfyUI?](#how-to-get-the-workflow-from-comfyui)
-- [Bring Your Own Models and Nodes](#bring-your-own-models-and-nodes)
-  * [Network Volume](#network-volume)
-  * [Custom Docker Image](#custom-docker-image)
-- [Local testing](#local-testing)
-  * [Setup](#setup)
-    + [Setup for Windows](#setup-for-windows)
-  * [Testing the RunPod handler](#testing-the-runpod-handler)
-  * [Local API](#local-api)
-    + [Access the local Worker API](#access-the-local-worker-api)
-    + [Access local ComfyUI](#access-local-comfyui)
-- [Automatically deploy to Docker hub with GitHub Actions](#automatically-deploy-to-docker-hub-with-github-actions)
-- [Acknowledgments](#acknowledgments)
+- [runpod-worker-comfy](#runpod-worker-comfy)
+  - [Quickstart](#quickstart)
+  - [Features](#features)
+  - [Config](#config)
+    - [Upload image to AWS S3](#upload-image-to-aws-s3)
+  - [Use the Docker image on RunPod](#use-the-docker-image-on-runpod)
+  - [API specification](#api-specification)
+    - [JSON Request Body](#json-request-body)
+    - [Fields](#fields)
+      - ["input.images"](#inputimages)
+  - [Interact with your RunPod API](#interact-with-your-runpod-api)
+    - [Health status](#health-status)
+    - [Generate an image](#generate-an-image)
+      - [Example request with cURL](#example-request-with-curl)
+  - [How to get the workflow from ComfyUI?](#how-to-get-the-workflow-from-comfyui)
+  - [Bring Your Own Models and Nodes](#bring-your-own-models-and-nodes)
+    - [Network Volume](#network-volume)
+    - [Custom Docker Image](#custom-docker-image)
+  - [Local testing](#local-testing)
+    - [Setup](#setup)
+      - [Setup for Windows](#setup-for-windows)
+    - [Testing the RunPod handler](#testing-the-runpod-handler)
+    - [Local API](#local-api)
+      - [Access the local Worker API](#access-the-local-worker-api)
+      - [Access local ComfyUI](#access-local-comfyui)
+  - [Automatically deploy to Docker hub with GitHub Actions](#automatically-deploy-to-docker-hub-with-github-actions)
+  - [Acknowledgments](#acknowledgments)
+  - [TMS Readme](#tms-readme)
+    - [Build container for AMD64 Architecture](#build-container-for-amd64-architecture)
+    - [Testing workflows](#testing-workflows)
 
 <!-- tocstop -->
 
@@ -400,3 +404,48 @@ If you want to use this, you should add these secrets to your repository:
 - Thanks to [Justin Merrell](https://github.com/justinmerrell) from RunPod for [worker-1111](https://github.com/runpod-workers/worker-a1111), which was used to get inspired on how to create this worker
 - Thanks to [Ashley Kleynhans](https://github.com/ashleykleynhans) for [runpod-worker-a1111](https://github.com/ashleykleynhans/runpod-worker-a1111), which was used to get inspired on how to create this worker
 - Thanks to [comfyanonymous](https://github.com/comfyanonymous) for creating [ComfyUI](https://github.com/comfyanonymous/ComfyUI), which provides such an awesome API to interact with Stable Diffusion
+
+## TMS Readme
+
+This repo serves as the base for running serverless comfyui containers in Runpod.
+
+The documentation in the readme still holds true, with the addition of the following instructions:
+
+### Build container for AMD64 Architecture
+
+Runpod servers are exclusively AMD64. If you are builidng the container on a Mac, it will create one for the ARM64 architecture which obviously will fault when deployed to Runpod.
+
+If you have additional python packages that need to be installed in order for custom nodes in ComfyUI to work, please add them to the (requirements.txt)[requirements.txt] 
+
+This is the command to build amd64 on mac, and push to the tmstech docker repo when complete:
+
+```shell
+# login to docker hub before we push the container
+
+docker login
+
+docker buildx build --platform linux/amd64 --no-cache --build-arg SKIP_DEFAULT_MODELS=1 -t tmstech/comfyui-worker:latest --push . 
+```
+
+It is an open TODO to have the container built and pushed to Dockerhub 
+
+### Testing workflows
+
+There is a script in the root directory `run_workflow.sh`
+
+It takes one argument, the location of the workflow to run. We recommend saving workflows in the folder `test_resources/workflows` and referencing them from there
+
+You will need to populate a .env file in the root directory with the ACCOUNT_ID and API_KEY from Runpod, which are both described in the README above
+
+example .env
+
+```
+ACCOUNT_ID=g5hy3yvzxbre8t
+API_KEY=<your_api_key here>
+```
+
+example:
+
+```shell
+./run_workflow.sh test_resources/workflows/test_workflow_lora_02.json
+```
