@@ -1,12 +1,45 @@
 #!/bin/bash
 
+# Initialize an empty array to store image data
+declare -a IMAGE_DATA
+
+# Function to process image arguments
+process_image_arg() {
+    local arg=$1
+    local img_var=${arg%%:*}
+    local img_file=${arg#*:}
+    
+    if [ ! -f "$img_file" ]; then
+        echo "Error: Image file '$img_file' not found."
+        exit 1
+    fi
+    
+    local base64_image=$(base64 -i "$img_file")
+    IMAGE_DATA+=("{\"name\":\"$img_var\",\"image\":\"$base64_image\"}")
+}
+
+# Parse command line arguments
+
+while getopts "i:" opt; do
+    case $opt in
+        i)
+            process_image_arg "$OPTARG"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Get the workflow file (last argument)
+WORKFLOW_FILE="${@: -1}"
+
 # Check if the workflow file argument is provided
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <workflow_file>"
+if [ -z "$WORKFLOW_FILE" ]; then
+    echo "Usage: $0 [-i img_var:img_file ...] <workflow_file>"
     exit 1
 fi
-
-WORKFLOW_FILE=$1
 
 # Check if the workflow file exists
 if [ ! -f "$WORKFLOW_FILE" ]; then
@@ -14,11 +47,6 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
     exit 1
 fi
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "Error: .env file not found."
-    exit 1
-fi
 
 # Source the .env file
 source .env
@@ -32,9 +60,13 @@ fi
 # Create the output directory if it doesn't exist
 mkdir -p output
 
+# Extract the base filename from WORKFLOW_FILE without the extension
 BASENAME=$(basename "$WORKFLOW_FILE" .json)
+
+# Initialize the output filename
 OUTPUT_FILENAME="output/${BASENAME}.png"
 
+# Check if the file already exists and increment if necessary
 counter=1
 while [ -f "$OUTPUT_FILENAME" ]; do
     OUTPUT_FILENAME="output/${BASENAME}_${counter}.png"
@@ -48,20 +80,32 @@ WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
 JSON_PAYLOAD=$(cat <<EOF
 {
   "input": {
-    "workflow": $WORKFLOW_CONTENT
+    "workflow": $WORKFLOW_CONTENT,
+    "images": [
+      $(IFS=,; echo "${IMAGE_DATA[*]}")
+    ]
   }
 }
 EOF
 )
 
+echo "JSON Payload size: $(echo "$JSON_PAYLOAD" | wc -c) bytes"
+
 # Construct the URL
 URL="https://api.runpod.ai/v2/${ACCOUNT_ID}/runsync"
 
-# Send the curl request
+# Write the JSON payload to a temporary file
+TEMP_JSON=$(mktemp)
+echo "$JSON_PAYLOAD" > "$TEMP_JSON"
+
+# Send the curl request using the temporary file
 RESPONSE=$(curl -X POST "$URL" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer ${API_KEY}" \
-     -d "$JSON_PAYLOAD")
+     -d @"$TEMP_JSON")
+
+# Remove the temporary file
+rm "$TEMP_JSON"
 
 # Extract the outer status
 OUTER_STATUS=$(echo "$RESPONSE" | jq -r '.status')
@@ -93,10 +137,7 @@ if [ "$BASE64_IMAGE" == "null" ] || [ -z "$BASE64_IMAGE" ]; then
     exit 1
 fi
 
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-
-
 # Decode the base64 image and save it to a file
-echo "$BASE64_IMAGE" | base64 --decode > "$OUTPUT_FILENAME"
+
 
 echo "Image successfully saved as $OUTPUT_FILENAME"
