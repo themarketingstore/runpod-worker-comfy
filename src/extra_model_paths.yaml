@@ -9,3 +9,9 @@ runpod_worker_comfy:
   loras: models/loras/
   upscale_models: models/upscale_models/
   vae: models/vae/
+  ipadapter: models/ipadapter/
+  depthanything: models/depthanything/
+  grounding-dino: models/grounding-dino/
+  rembg: models/rembg/
+  sams: models/sams/
+  unet: models/unet/

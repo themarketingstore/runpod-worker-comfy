@@ -92,7 +92,8 @@ EOF
 echo "JSON Payload size: $(echo "$JSON_PAYLOAD" | wc -c) bytes"
 
 # Construct the URL
-URL="https://api.runpod.ai/v2/${ACCOUNT_ID}/runsync"
+#URL="https://api.runpod.ai/v2/${ACCOUNT_ID}/runsync"
+URL="https://azkn9bwqp2tp1w-8000.proxy.runpod.net/runsync"
 
 # Write the JSON payload to a temporary file
 TEMP_JSON=$(mktemp)
@@ -137,7 +138,12 @@ if [ "$BASE64_IMAGE" == "null" ] || [ -z "$BASE64_IMAGE" ]; then
     exit 1
 fi
 
-# Decode the base64 image and save it to a file
+echo "$BASE64_IMAGE" | base64 --decode > "$OUTPUT_FILENAME"
 
-
-echo "Image successfully saved as $OUTPUT_FILENAME"
+# Check if the file was created successfully
+if [ -f "$OUTPUT_FILENAME" ]; then
+    echo "Image successfully saved as $OUTPUT_FILENAME"
+else
+    echo "Error: Failed to save the image."
+    exit 1
+fi
